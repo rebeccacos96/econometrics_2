@@ -1,0 +1,204 @@
+---
+title: "Computer Assignment 2B - Econometrics 2"
+author: "Rebecca Costello"
+date: "2/8/2020"
+output: pdf_document
+---
+
+# # Rebecca Costello, Ties van der Veen, Matei van der Meer
+
+```{r packages, include=FALSE}
+library(coefplot)
+library(foreign)
+library(tidyverse)
+library(ggdag)
+library(dplyr)
+library(tinytex)
+library(jtools)
+library(huxtable)
+library(summarytools)
+library(ggstance)
+library(pwr)
+library(knitr)
+library(lemon)
+library(AER)
+library(lubridate)
+library(ggplot2)
+library(interflex)
+library(plm)
+library(margins)
+library(haven)
+```
+
+```{r sumtools rmarkdown, include=FALSE}
+st_options(plain.ascii = FALSE, style = "rmarkdown")
+st_css()
+```
+
+
+
+```{r include=FALSE}
+knit_print.data.frame <- lemon_print
+```
+
+## Introduction to the computer assignment
+
+Relevant Variables:
+
+* spot: dichotomous outcome variable denoting whether a spot has been detected on the water surface 
+
+* year, month, hour: year, month and hour of observation 
+
+* grid_id: a gridcell, a place in the grid (based on UTM31N-coordinates) 
+
+* eventtime: hour relative to hour of sunset; event time 0 is the hour of sunset. The data are limited to event time -6 to event time +6. 
+
+* temp, temp_sq: current ambient temperature in degrees Celsius and the square of this variable 
+
+* watertemp, watertemp_sq: current water temperature in degrees Celsius and the square of this variable 
+
+* wind, wind_sq: current wind speed in m/s and the square of this variable
+
+## Explore your data
+
+```{r data}
+theUrl_ca2b_ectrics2 <- "https://surfdrive.surf.nl/files/index.php/s/sXRMtDDmAaGvGuG/download"
+oil <- read.dta (file = theUrl_ca2b_ectrics2)
+```
+
+### (a) What is average and the min/max of ambient temperature and of water temperature?
+
+Average ambient temperature
+```{r }
+oil %>%
+summarise(mean=mean(temp))
+```
+Min and max of ambiance temperature:
+```{r min max temp}
+print(min(oil$temp))
+print(max(oil$temp))
+```
+Average water temperature:
+```{r}
+#average water temperature
+oil %>%
+summarise(mean=mean(watertemp))
+
+```
+Min and max of water temperature:
+```{r}
+print(min(oil$watertemp))
+print(max(oil$watertemp))
+```
+
+
+### (b) What is the average hour of sunset in December and in July (remember that eventtime tells you the time of sunset)?
+Average hour of sunset:
+* December 
+```{r}
+oil %>%
+filter(month==12) %>%
+summarise(mean=mean(eventtime))
+```
+* July
+```{r}
+oil %>%
+filter(month==7) %>%
+summarise(mean=mean(eventtime))
+```
+
+## Graphical evidence of a treatment effect
+
+### (c) Write out the event time regression in mathematical terms.
+$spot_{it} = \beta_0 + \sum^T_{\tau = _{-T}}\alpha_{\tau}W_{\tau} + \lambda_{i} + \mu_{t} + \epsilon_{it}$
+
+### (d) Estimate the event time coefficients. In your regression equation, include grid-cell fixed effects, year-fixed effects and month-fixed effects (not hour fixed-effects). Use spot as outcome variable.
+
+* First see how event time is distributed:
+```{r }
+ggplot(oil, aes(x=eventtime))+
+geom_bar(stat="count")+
+labs(x='event time', y='count', title='Time since start of treatment')
+```
+
+
+```{r }
+ggplot(oil, aes(x=eventtime))+
+geom_bar(stat="count")+
+labs(x='event time', y='count', title='Time since start of treatment')
+```
+
+##### Leave out event time -2, that is the reference hour. This is the last ‘normal hour’, because one hour before sunset in our data (event time -1) includes some sunsets due to measurement error. Do not worry about binning the tails of the event time coefficients, those are already excluded from the dataset. Include all of the above-mentioned weather conditions as covariates. Even though we include time-fixed effects, those are different from the time-fixed effects in CA2a. When creating the pdata.frame, only include grid_id under index. When calling the plm function, use the option effect=‘individual’ (model is still ‘within’), and include as time-fixed effects in the regression equation factor(year)+factor(month).
+
+```{r}
+oil <- pdata.frame(oil, index=c("grid_id"))
+
+oil$eventtime <- as.factor(oil$eventtime)
+oil$eventtime <- relevel(oil$eventtime, "-2")
+et_reg <- plm(spot ~ eventtime + temp + watertemp, data = oil, effect = "individual", model = "within")
+coeftest(et_reg, vcov=vcovHC(et_reg, cluster="group"))
+```
+
+### (e) Use the estimation output from (d) to create an event time graph.
+
+```{r}
+dataevent <- coefplot(et_reg)
+
+dataevent <- dataevent$data
+
+dataevent$Coefficient <- as.character(dataevent$Coefficient)
+dataevent$Coefficient <- substr(dataevent$Coefficient, 10, 10000)
+dataevent$Coefficient <- as.numeric(dataevent$Coefficient)
+zero <- data.frame(0,0,0,0,0,0,"model", stringsAsFactors = FALSE)
+names(zero) <- names(dataevent)
+dataevent <- bind_rows(dataevent,zero)
+coefplot(dataevent, horizontal = TRUE)
+```
+
+#### Briefly discuss what you find.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
