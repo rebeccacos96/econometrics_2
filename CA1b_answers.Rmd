@@ -1,0 +1,152 @@
+---
+title: "Emetrics2 - Computer Assignment 1b"
+author: "Rebecca Costello, Ties van der Veen, Matei van der Meer"
+date: "2/3/2020"
+output: pdf_document
+---
+```{r loading library, include=FALSE}
+library(foreign)
+library(tidyverse)
+library(ggdag)
+library(dplyr)
+library(tinytex)
+library(jtools)
+library(huxtable)
+library(summarytools)
+library(ggstance)
+library(pwr)
+library(knitr)
+library(lemon)
+library(AER)
+library(lubridate)
+library(ggplot2)
+library(interflex)
+library(plm)
+library(margins)
+library(haven)
+knit_print.data.frame <- lemon_print
+st_options(plain.ascii = FALSE, style = "rmarkdown")
+st_css()
+```
+
+```{r data}
+theUrl_ca1b_ectrics2 <- "https://surfdrive.surf.nl/files/index.php/s/aaEVKXoZ3VTUbq3/download"
+waste2 <- read.dta (file = theUrl_ca1b_ectrics2)
+
+```
+
+Interact the treatment with the pre-treatment level of unseparated waste sorting.
+
+Generate a binary/dichotomous variable from a continuous variable, and add it to your data:
+```{r binar}
+high_sorting <- as.numeric(waste2$sorting >=61)
+waste2$high_sorting=high_sorting
+waste2$low_sorting=(1-waste2$high_sorting)
+```
+
+
+## A. Binary interaction variable
+### (a) Run a regression of the fully interacted model. Do this for the interaction between the treatment and the binary variable showing an above-median pre-treatment level of unseparated waste (high_sorting).
+
+As in CA1a, include fixed effects for route and week. Cluster your standard errors by route.
+
+```{r}
+ate4 <- plm(residual_weight ~ treatment*high_sorting, data = waste2, effect = "twoways",
+model = "within", index=c("route", "week"))
+coeftest(ate4, vcov=vcovHC(ate4, cluster="group"))
+```
+
+### (b) What is the point estimate of the conditional average treatment effect if high_sorting=0?
+
+```{r}
+ate5 <- plm(residual_weight ~ treatment*low_sorting, data = waste2, effect = "twoways",
+model = "within", index=c("route", "week"))
+coeftest(ate5, vcov=vcovHC(ate5, cluster="group"))
+```
+
+If high_sorting = 0, the point estimate of the CATE is (-1.056 + 0.04) =  -1.016)
+
+
+### (c) What is the point estimate of the conditional average treatment effect if high_sorting=1?
+
+If high_sorting = 1, the point estimate of the CATE is -0.04
+
+
+### (d) Do your answers to (b) and (c) make sense in terms of how different people respond to the treatment?
+
+Yes, if people who have already sorted a lot of their waste already will not have to sort a lot more. They already follow a pattern of behaviour that doesnt change as much. People with a low rate of sorting can be expected to have the greatest change as there is more waste for them to save on.
+
+### (e) Is the difference between the two conditional treatment effects estimated under (b) and (c) statistically significantly different from zero at the 5 percent level?
+
+
+Yes, the difference between the two conditional treatment effects estimated under (b) and (c) statistically is probably significantly different from zero at the 5 percent level. This is because the effect of the CATE at (c) is already very close to zero, while the CATE at (b) is very significant, as it is significantly different from zero at even the <0.001 level.
+
+
+## B. Continuous interaction variable
+
+### (f) Run a regression of the fully interacted model. Do this for the interaction between the treatment and the continuous variable showing the pre-treatment level of unseparated waste (sorting). As in CA1a, include fixed effects for route and week. Cluster your standard errors by route.
+
+```{r}
+ate6 <- plm(residual_weight ~ treatment*sorting, data = waste2, effect = "twoways", model = "within", index=c("route", "week"))
+coeftest(ate6, vcov=vcovHC(ate6, cluster="group"))
+```
+
+
+
+### (g) Compute the average treatment effect, based on the output of the fully interacted model.
+
+```{r}
+ate7 <- plm(residual_weight ~ treatment, data = waste2, effect = "twoways",
+model = "within", index=c("route", "week"))
+coeftest(ate7, vcov=vcovHC(ate7, cluster="group"))
+```
+
+```{r ATE}
+print(-0.0989032+(mean(waste2$sorting)*(-0.0156784))) 
+
+```
+
+### (h) What does the statistical test for the presence of an interaction effect tell us (i.e. what is the statistical significance of the coefficient on the interaction term)?
+
+The interaction term is significant at the 5% significance level, showing that the treatment and sorting level have a statistically significant effect together. The significance of the interaction term indicates that the marginal effect of treatment also varies over the level of pre-treatment sorting. This means that the treatment did have a significant effect, but only on the people that had a level of sorting that was below the threshold of 61, so the people that still had a lot to improve. 
+
+
+### (i) Create a linear marginal effect plot based on the interflex command for the interaction between the treatment and the continuous pre-treatment level of unseparated waste. As one of the options include, na.rm = TRUE, given that we have missing observations.
+
+```{r ME plot b, na.rm=TRUE}
+out <- inter.binning(Y = "residual_weight", D = "treatment", X = "sorting", Z = NULL, FE = c("route", "week"), data = waste2, vartype = "cluster", cl="route", main = NULL, wald=TRUE, ylab="conditional average treatment  effect", na.rm=TRUE)
+out$graph
+```
+
+
+### (j) Are the results for the three bins at low/medium/high values of sorting very different from the linear relationship?
+
+The Low sorting value bin has a higher CATE than the Medium and High, although the confidence interval shares a lot of common area between the three. So the difference does not seem very large.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
