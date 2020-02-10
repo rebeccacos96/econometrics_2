@@ -1,0 +1,230 @@
+---
+title: "Emetrics2 - Computer Assignment 1a"
+author: "Rebecca Costello, Ties van der Veen, Matei van der Meer"
+date: "03/02/2020"
+output: pdf_document
+---
+
+
+```{r packages, include=FALSE}
+library(foreign)
+library(tidyverse)
+library(ggdag)
+library(dplyr)
+library(tinytex)
+library(jtools)
+library(huxtable)
+library(summarytools)
+library(ggstance)
+library(pwr)
+library(knitr)
+library(lemon)
+library(AER)
+library(lubridate)
+library(ggplot2)
+library(interflex)
+library(plm)
+library(margins)
+library(haven)
+```
+
+
+
+## II. Treatment heterogeneity in Allcott (2011)
+(a) Define the ‘boomerang effect’ discussed in the paper.
+
+This effect can be described as whether people who consumed less than the norm consume more after learning what their neighbours consume. This is derived from the idea that people want to fit in and not derive greatly from the norm.
+
+(b) How does the concept of ‘conditional cooperation’ relate to the heterogeneity of the treatment effect by pre-treatment use (check paragraph 2.1).
+
+The high use pre-treatment group respond by decreasing their consumption of energy after being informed that others use less.
+
+
+(c) How does Allcott test for heterogeneity of the treatment effect in Section 4 (skip discussion of the quantile treatment effects) and as shown in Figure 8?
+
+Allcott uses an interactive dummy that divides the treatment and control into groups based on their pre-treatment energy consumption. Allcott looks at the Conditional Average Treatment Effects, or CATEs. These are taken for “households in different percentiles of their experiment’s distribution of baseline usage”. This shows that the more energy a household used before the treatment, the more it saved after the treatment.
+
+(d) What is the policy relevance (as discussed in the paper) of the evidence for heterogeneous treatment
+effects?
+-More appreciation of non-price measurements
+-focus on a certain group of customers (high usage) -> cheaper to target specific groups
+-The energy savings that can be reached by implementing the treatment described in this research are on par with what a price increase of 5.2% could save. This is both more effective than a carbon cap and trade system (2.5% savings in 2020, 20% in 2030), and is less controversial. Overall, implementing this treatment seems like a better alternative.
+
+```{r data}
+theUrl_ca1a_ectrics2 <- "https://surfdrive.surf.nl/files/index.php/s/Jh0fYEzZK1JVZAi/download"
+waste <- read_dta ("heterogeneity_v11_12.dta")
+
+```
+
+## IV. Potential Outcomes
+(a) Define the two potential outcomes for each route, Y(0,i) and Y(1,i).
+
+ Y(0,i): residual waste weight per garbage collection route per week remains the same
+ Y(1,i):  residual waste weight per garbage collection route per week changes (hopefully reduced)
+
+
+(b) Provide two reasons why the treatment could affect the weight of residual waste collected. Keep it short.
+
+1. Repercussions for failing to seperate waste could move people to be more careful when disposing of an item.
+
+2. The second treatment period could show a habit-forming effect. This could happen because of a variety of reasons: people find it easier to seperate waste, are more aware of their impact on the environment, etc.
+
+
+## V. Descriptive Statistics
+(a) What is the mean of the main outcome variable in week 34? And over how many routes has this mean been calculated? What does this imply for the average number of kilos of residual waste per week and per household in the Tilburg area in that week?
+
+```{r mean + route no.}
+waste_sample <- waste[waste$calendar_week==34, ]
+waste_sample %>%
+summarise(mean = mean(waste_sample$residual_weight, na.rm=TRUE), n = n())
+```
+
+The mean of the main outcome variable, residual weight, is roughly 7.89 in week 34. This was calculated over all routes, as can be seen by the n-value (which indicates the number of routes) being 55. This implies that the average kilos of residual waste per household in this region was about 8 kg.
+
+```{r min and max time between T1+T2}
+min(waste$TimeElapsed,na.rm=TRUE)
+max(waste$TimeElapsed,na.rm=TRUE)
+```
+
+(c) Create a line plot of the outcome variable by calendar week and treatment/control, for the 16 routes that have the highest TimeElapsed:
+
+```{r create mean values}
+groupmeans <- waste %>%
+filter(TimeElapsed>25) %>%
+group_by(RepTreatment, calendar_week) %>%
+summarise(residual_weight_mean = mean(residual_weight))
+```
+
+```{r RepTreatment not gradient but factor}
+groupmeans$RepTreatment <- as.factor(groupmeans$RepTreatment)
+```
+
+```{r line plot}
+ggplot(groupmeans, aes(x = calendar_week, y = residual_weight_mean, color=RepTreatment)) +
+stat_summary(geom = 'line') +
+theme_minimal()
+```
+
+Do the raw data indicate that anything is going on as of the date of the repeated treatment?
+
+Since the date of the repeated treatment average residual waste has been decreasing. The graph seems to show overall lower means for garbage for the groups that have had the treatment administered than those who have not. Though this graph is not fully decisive so it seems wrong to draw conclusions this early.
+
+##VI. Reporting and interpreting treatment heterogeneity
+
+(a) First, estimate the average treatment effect (ATE). If we ignore serial correlation between observations within routes, as we did in Econometrics 1, then we would estimate the following:
+
+```{r ATE}
+ate <- lm(residual_weight ~ RepTreatment + factor(route) + factor(calendar_week), data=waste)
+summ(ate)
+```
+
+(1) what does the coefficient as reported in your regression output mean? 
+After the treatment was repeated there was a 22% decrease in the average waste weight, controlling for route and calendar week. 
+
+(1) The coefficient for RepTreatment is estimated at -0.22. This tells us that the treatment caused a lower average waste disposal for subjects that were administered the treatment. 
+
+
+
+(2) is the effect large or small? (to be able to interpret the average treatment effect in percentage terms, divide the coefficient by the mean of the outcome variable)
+-0.22/7.887636 = -0.02789175362 (decrease of 0.03%)
+This is a small effect.
+
+
+```{r clustering SE}
+ate1 <- plm(residual_weight ~ RepTreatment, data = waste, effect = "twoways", model = "within", index=c("route", "calendar_week"))
+coeftest(ate1, vcov=vcovHC(ate1, cluster="group"))
+```
+
+(b) We are going to explore the interaction between the treatment variable and the time since the last treatment. To estimate the fully interacted model, run the following command:
+
+```{r interaction of treat and time since last treatment}
+ate2 <- plm(residual_weight ~ RepTreatment*TimeElapsed, data = waste, effect = "twoways", model = "within", index=c("route", "calendar_week"))
+coeftest(ate2, vcov=vcovHC(ate2, cluster="group"))
+
+```
+
+```{r repeat of above}
+ate89 <- plm(residual_weight ~ RepTreatment + factor(route) + factor(calendar_week), data = waste)
+coeftest(ate89, vcov=vcovHC(ate89, cluster="group"))
+
+```
+
+```{r ATE is similar}
+print(0.31185+(mean(waste$TimeElapsed)*(-0.0238)))
+```
+Yes it is similar.
+
+# (c) Consider the regression output from (b). At which value of the interaction term TimeElapsed does the coefficient for the treatment dummy RepTreatment (ignore the 1 in the reported variable name) show the conditional average treatment effect (CATE)?
+ 
+15.
+
+Does it make sense to report this particular CATE?
+
+Yes as the effect does depend on time elapsed since treatment. It indicates a presence of a linear interaction effect.
+
+(d) Consider the regression output from (b). What does the coefficient for the term RepTreatment1:TimeElapsed stand for? Do you consider this reported interacted term to be informative for someone interested in how the treatment effect varies with time elapsed?
+
+It represents a linear interaction effect. This would be useful to see how the treatment varies over time of one unit change in time elapsed.
+
+(d2) What is the statistical significance of this interaction term? What can you conclude from the reported p-value?
+
+The statistical significance of this term is 0.2004, meaning that in 20% of repeated tests we would get different results of this estimator. This is not a generally accepted significance level, but could be sizable enough for policy effects.
+
+
+(e) Let us now go for the third possibility of reporting the results of an interacted model: a marginal effect plot. First, we assume that the marginal effect of the treatment varies linearly with the interaction term TimeElapsed. To create the marginal effect plot, we use the package interflex.
+
+```{r ME plot data reload}
+theUrl_ca1a_ectrics2 <-"https://surfdrive.surf.nl/files/index.php/s/Jh0fYEzZK1JVZAi/download"
+waste <- read.dta (file = theUrl_ca1a_ectrics2)
+```
+
+```{r ME plot}
+out <- inter.binning(Y = "residual_weight", D = "RepTreatment", X = "TimeElapsed",
+Z = NULL, FE = c("route", "calendar_week"), data = waste,
+vartype = "cluster", cl="route", main = NULL,
+wald=TRUE, ylab="conditional average treatment effect")
+out$graph
+```
+
+(e2) For now, ignore the three bins, focus on the marginal effect plot. What does the plot suggest about the marginal effect of the treatment by time elapsed since the end of the first treatment? Why do the marginal effects line up so nicely?
+
+This plot suggests that the CATE decreases as time elapsed increases. The marginal effects line up because it is forced to take a line-shape by the function (interactions force linear relationship).
+
+(f) Let us now look at the three bins that are superimposed on the marginal effect plot. These bins are separately estimated marginal effects for ranges of values of TimeElapsed. inter.binning created three bins for us with low, medium and high values of TimeElapsed.
+Does the linear approximation provide a fairly good idea of how the marginal effect of the treatment varies with the time elapsed since the end of the first treatment? 
+
+No, it does provide a good linear approximation. The confidence bounds include zero 2/3 times which makes it difficult to be certain, with bins of a large range.
+
+(g) Do the conditional marginal effects of the treatment have a causal interpretation?
+
+Yes. It does seem logical that after a period of time the marginal effect of the treatment diminishes. As more time elapses, people revolve back into their regular behaviours and waste as much as before.
+
+(h) Say that you are a policymaker, and you have to decide how much time you should leave between the first treatment and the repeated treatment. How does the above marginal effect plot help you to make this decision?
+
+The graph indicates that the CATE is higher for a lower time elapsed It would probably be better to have a short time between the first treatment and the repeated treatment to make the effect and consequenses more salient in the minds of the treated.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
