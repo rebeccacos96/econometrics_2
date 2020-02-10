@@ -1,0 +1,197 @@
+---
+title: "Computer Assignment 2A - Econometrics 2"
+author: "Rebecca Costello, Ties van der Veen, Matei van der Meer"
+date: "2/8/2020"
+output: pdf_document
+---
+
+
+
+
+```{r packages, include=FALSE}
+library(coefplot)
+library(foreign)
+library(tidyverse)
+library(ggdag)
+library(dplyr)
+library(tinytex)
+library(jtools)
+library(huxtable)
+library(summarytools)
+library(ggstance)
+library(pwr)
+library(knitr)
+library(lemon)
+library(AER)
+library(lubridate)
+library(ggplot2)
+library(interflex)
+library(plm)
+library(margins)
+library(haven)
+```
+
+
+```{r sumtools rmarkdown, include=FALSE}
+st_options(plain.ascii = FALSE, style = "rmarkdown")
+st_css()
+```
+
+## Time-varying treatment effects in Allcott & Rogers (2014)
+### (a) What mechanism do the authors mention that drives the behavioral response to the treatment?
+The action and backsliding in response to the treatment is mentioned as the report is more salient in the minds of the consumers and then gradually declines along with the level of attempt to reduce the energy consumption. The reports act as an exogenous 'cue' which causes people to pay attention to pay attention to energy consumption. Marginal Utility of energy consumption is lowered because of this and therefore people use less energy. The cue is removed as people throw out the report and memory of it fades, and MU of consuming energy returns to its un-cued state. 
+
+
+### (b) How does the behavioral response to receiving the home energy reports differ between the first four reports and later reports?
+During the first four reports, the action and backsliding behaviour takes place. After the first four months, people become accustomed to the cues and the behaviour of saving energy is learned. The repeated cues are not needed to generate a conditional response.
+
+### (c) What is the policy relevance of this paper, relative to what was already known about the effect of the treatment? 
+This research debunks the assumption of zero persistance of long-run effects. They show how this assumption understates electricity cost savings over their four to five year samples by more than a factor of two. Given the cost effectiveness of competing  energy efficiency programs, the improved cost effectiveness from observed levels of persistence relative to the previous assumptions could change program adoption decisions for typical utilities.
+
+
+## Introduction to the computer assignment - The DATA
+
+```{r data}
+theUrl_ca2a_ectrics2 <- "https://surfdrive.surf.nl/files/index.php/s/ZphgKxImtwFawv9/download"
+waste2a <- read.dta (file = theUrl_ca2a_ectrics2)
+```
+
+## Graphical evidence of a treatment effect
+
+### (a) Estimation equation in mathematical terms with the appropriate event time coefficients.
+$residualweight_{it} = \beta_0 + \sum^T_{\tau = _{-T}}\alpha_{\tau}W_{\tau} + \lambda_{i} + \mu_{t} + \epsilon_{it}$
+
+
+### (b) Define the variable eventtime, with event time 0 being the last week before the start of the treatment. This is an intuitive definition of event time: event time 1 is the first week of the treatment, event time 2 the second week, etc. (exact definition of what week is 0 is a matter of taste).
+
+```{r }
+waste2a <- waste2a %>%
+            group_by(route) %>%
+          mutate(weekstart=ifelse(treatment==1,calendar_week,Inf),weekstart2=min(weekstart), 
+                 eventtime=calendar_week-weekstart2+1) %>%
+          select(-weekstart,-weekstart2) %>%
+          ungroup()
+```
+
+### (c) To see how event time is distributed, make a histogram:
+```{r hist event time}
+ggplot(waste2a, aes(x=eventtime))+
+geom_bar(stat="count")+
+labs(x='event time', y='count', title='Time since start of treatment')
+```
+
+#### To deal with the low number of observations in the tails, create two bins containing the extreme values of eventtime:
+```{r merge tails}
+waste2a <- waste2a %>%
+            mutate(eventtime2 = ifelse(eventtime<=-37,-37, ifelse(eventtime>=28,28,eventtime)))
+```
+
+#### Estimate the event time coefficients
+
+```{r event time coef}
+waste2a <- pdata.frame(waste2a, index=c("route", "calendar_week"))
+
+waste2a$eventtime <- as.factor(waste2a$eventtime2)
+waste2a$eventtime <- relevel(waste2a$eventtime, "0")
+
+et_reg <- plm(residual_weight ~ eventtime, data = waste2a, effect = "twoways", model = "within")
+
+coeftest(et_reg, vcov=vcovHC(et_reg, cluster="group"))
+```
+
+### (d) One way of plotting your estimated event time coefficients is by using the command coefplot. Check every line of code to understand how this function works.
+
+```{r plot event time coef}
+dataevent <- coefplot(et_reg)
+
+dataevent <- dataevent$data
+
+dataevent$Coefficient <- as.character(dataevent$Coefficient)
+dataevent$Coefficient <- substr(dataevent$Coefficient, 10, 10000)
+dataevent$Coefficient <- as.numeric(dataevent$Coefficient)
+zero <- data.frame(0,0,0,0,0,0,"model", stringsAsFactors = FALSE)
+names(zero) <- names(dataevent)
+dataevent <- bind_rows(dataevent,zero)
+
+coefplot(dataevent, horizontal = TRUE)
+
+```
+
+## Modeling time variation in the treatment effect
+
+### (a) As a first step, ignore time variation in the treatment effect, just estimate the average treatment effect (using the by now familiar difference-in-differences set up). Given the estimation results, are you likely to overestimate or underestimate the long-term treatment effect?
+
+```{r}
+ate2a1 <- plm(residual_weight ~ treatment, data=waste2a, effect="twoways", model = "within", index=c("route", "calendar_week"))
+coeftest(ate2a1, vcov=vcovHC(ate2a1, cluster="group"))
+```
+
+We are more likely to overestimate the long-term effects as we are finding a highly significant effect of the treatment in the short term after the treatment is implemented.
+
+
+### (b) As a second step, assume linear decay in the behavioral response once the treatment has ended. The dataset includes the variable linear_decay that counts the weeks after the end of the treatment. Add this variable as a separate variable to your regression
+
+```{r}
+ate2a2 <- plm(residual_weight ~ treatment + linear_decay, data=waste2a,  effect="twoways", model = "within", index=c("route", "calendar_week"))
+coeftest(ate2a2, vcov=vcovHC(ate2a2, cluster="group"))
+```
+
+
+#### Based on your estimation results, within how many weeks has the initial treatment effect completely disappeared? 
+```{r}
+{-0.991581}/{0.011657}
+```
+
+
+#### Is this realistic given the graphical evidence generated above?
+
+I DONT KNIOWWOWOJW
+
+
+### (c) As a third step, allow for an effect that varies according to the stages of the treatment by replacing the variable treatment by three variables LetterReceived + TreatmentOngoing + TreatmentCompleted (and no longer including linear_decay).
+
+```{r}
+ate2a3 <- plm(residual_weight ~ LetterReceived + TreatmentOngoing + TreatmentCompleted, data=waste2a,  effect="twoways", model = "within", index=c("route", "calendar_week"))
+coeftest(ate2a3, vcov=vcovHC(ate2a3, cluster="group"))
+```
+
+#### After running the above regression, conduct a statistical test whether the effect during vs. after are statistically significantly different:
+```{r}
+linearHypothesis(ate2a3, "TreatmentOngoing = TreatmentCompleted")
+```
+
+#### Based on this test, are you able to reject the null hypothesis of no difference at conventional levels of statistical significance (i.e. greater than 95 percent confidence)?
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
