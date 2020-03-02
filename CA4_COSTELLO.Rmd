@@ -1,0 +1,185 @@
+---
+title: "Computer Assignment 4 | Econometrics 2"
+author: "Rebecca Costello, Ties van der Veen, Matei van der Meer"
+date: "2/22/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+rm(list = ls())
+```
+
+```{r packages, include=FALSE}
+library(foreign)
+library(tidyverse)
+library(ggdag)
+library(dplyr)
+library(tinytex)
+library(jtools)
+library(huxtable)
+library(summarytools)
+library(ggstance)
+library(pwr)
+library(knitr)
+library(lemon)
+library(AER)
+library(lubridate)
+library(ggplot2)
+library(plm)
+library(pwr)
+```
+
+### DATA
+
+```{r}
+theUrl_ca4_ectrics2 <- "https://surfdrive.surf.nl/files/index.php/s/uWdWgE18hCYE4LS/download"
+experiment <- read.dta (file = theUrl_ca4_ectrics2)
+```
+
+```{r}
+experiment
+```
+
+
+### (a) Estimate the treatment effect
+
+```{r ATE}
+ate41 <- plm(violations ~ treatment_dummy_2, data=experiment, effect = "twoways", model = "within", index = c("month"))
+
+coeftest(ate41, vcov=vcovHC(ate41, cluster="group"))
+
+```
+
+### (b) Report findings
+
+I found no significant effect of the treatment on the amount of violations. My results suggest a 1.23 point decrease in violations after the treatment was fully implemented. 
+
+```{r}
+#Nonetheless, a difference in the outcome ranging from a 0.02 point decrease to an 0.88 point increase is also reasonably compatible with our data, given our assumptions???
+```
+
+### (c) Given this statistically insignificant result, what is the chance that the treatment indeed does not work? 
+
+P(treatment doesn't work | test -)
+= [ P(test result is negative | treatment doesn't work )*P(probability the treatment doesn't work) ] / P(probability the test result is negative)
+
+= [(0.95)(0.75)]/(0.05)
+
+```{r}
+#just some comments:
+
+# a significance level of 0.05 indicates a 5% risk of concluding that a difference exists when there is no actual difference.
+
+```
+
+Probability treatment doesn't work: 0.75
+
+The Standard Deviation when n=42:
+```{r std dev}
+SD <- (1.1326*sqrt(42))
+print(SD)
+```
+
+The Effect Size when n=42, using the standard deviation:
+```{r effect size}
+ES <- (-1.2333)/(SD)
+print(ES)
+```
+
+The Power of the experiment:
+```{r power}
+pwr.t.test(n = 42, d = -0.1680225, sig.level = 0.05, power = NULL,
+type = c("two.sample"), alternative="two.sided")
+
+```
+
+The chance that the treatment indeed does not work:
+(Power * P(doesn't work)) / (Power * P(doesn't work) + $\alpha$ * P(works)). 
+
+Using the power calcuated above, power= 0.1185235:
+```{r}
+(0.1185235 * 0.75) / (0.1185235 * 0.75 + 0.05 * 0.25)
+```
+
+The probability that the treatment indeed does not work is 87.67%
+
+
+### (d) Say that someone else publishes a study on the same treatment. She finds a point estimate for the equivalent of treatment_dummy_2 of -1.2, with a standard error of 0.45. The power of her study is 40 percent. Is her finding consistent with what you found under (a)?
+
+Her Standard Deviation when n=42:
+```{r std dev2}
+SD2 <- (0.45*sqrt(42))
+print(SD2)
+```
+
+Her Effect Size when n=42, using the standard deviation:
+```{r effect size2}
+ES2 <- (-1.2)/(SD2)
+print(ES2)
+```
+
+The Power of the experiment:
+
+```{r power2}
+pwr.t.test(n = 42, d = -0.4114756, sig.level = NULL, power = 0.4,
+type = c("two.sample"), alternative="two.sided")
+```
+
+Our experiment  sig.level: 0.2898
+Her experiment  sig.level: 0.03
+
+Her finding is not consistent with what we found in part (a) as she finds a significant result at p < 0.05.
+
+
+### (e) Now, let us switch to the probability that the treatment does work. That is simply 1-P(treatment doesn’t work). Take the posterior of (c), make it your new prior. Make sure that you work with the probability that the treatment works (not with the probability that the treatment doesn’t work). Update your belief about the likelihood that the treatment works based on the results of the new study mentioned under (d). Show how you arrived at your answer.
+
+Probability treatment does work: 0.25
+Posterior of (c): 0.8767169,  the probability that the treatment does not work, given the test results. 
+New Prior: 1-0.8767169 = 0.1232831 the probability that the treatment does work, given the test results.
+
+```{r}
+(0.1232831 * 0.25) / (0.1232831 * 0.25 + 0.05 * 0.75)
+
+```
+
+```{r}
+(0.12 * 0.25) / (0.12 * 0.25 + 0.03 * 0.75)
+
+```
+
+### (f) (f) Redo what you did under (e), but now take publication bias into account. Assume that bias is 0.20. 
+
+We are still looking at the probability that the treatment does work:
+K = P * (c * S)
+M = (1-P) * (c * S)
+
+Publication bias is u = 0.2 (>0), so when looking at Test+ and works we use:
+K+uM
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
