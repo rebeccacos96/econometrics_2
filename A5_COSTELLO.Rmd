@@ -1,0 +1,36 @@
+---
+title: "Assignment 5"
+author: "Rebecca Costello, Ties van der Veen, Matei van der Meer"
+date: "3/10/2020"
+output: pdf_document
+---
+# Theory
+
+## (a) Briefly describe the treatment.
+The treatement used in this research was a six month increase in police patrols on 394 randomly chosen hot spot (high level of criminal activity) street segments. The other recognised hot spots from the total sample of 967 street segments were used as the control group.
+
+## (b) What do the authors state about the mechanisms that may be at work?
+The focus mainly on context specific related mechanisms to explain their results and how these differ from the other previous studies. They give the reason that Medellı́n is disproportionally affected by car crime relative to other Colombian cities as an explaination for the only positive effect found for car thefts. They also mention the extent of control by criminal organisations (organised crime) to be a factor in the lack of change they find.
+
+
+## (c) What do they say about how the treatment effect depends on properties of the population and the situation?
+They mention that the treatment does depend on properties of the population and the situation. 
+"What seems to work in the USA or even in Bogotá is not as responsive in Medellı́n (and vice versa)"
+Their research is important as it adds nuance to the current research and adds caution to the potential uptake of the treatment in different environments.
+
+# Strength of evidence
+
+## (d) Do you judge the evidence based on this experiment to be actionable? In other words, does the evidence provide a good picture of what to expect? 
+
+I do think that the evidence provides a good picture of what to expect, given the context and environment of the treatment. Based on the results of the experiment, with the non-significance and low power of the main effect, I would not reccomend this specific action. Other issues need to be addressed first, for example, the effectiveness of the police force.
+
+# Economics of scaling
+
+## (e) Would you consider scaling to be an issue in this case? Do the authors address the costs and benefits of scaling up of the treatment at all?
+Yes, I do consider scaling to be an issue here in this case. In the treatment, the police were monitored and so complied for the most part with the treatment. How effective they were in carrying out the treatment on this large scale and the extra cost of monitoring is something to consider when looking at scaling.
+
+
+## (f) How do the authors address possible spillovers from treatment to control? What do they find - and how does it matter for their results?
+To address possible spillovers they split the control group into three groups based on their distance from the treatment. This allows them to estimate direct treatment effects by comparing targeted streets with pure, presumably uncontaminated controls. They find that there are no spillover effects to other types of crimes (only property/car theft). Due to the large amount of non-experimental streets however, relatively small spillovers could still have an effect due to a higher power.
+
+
